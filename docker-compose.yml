@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=idmapp
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      - SERVER_PORT=8080
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+    volumes:
+      - ./.env:/root/.env:ro
+    networks:
+      - idmapp-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=idmapp
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - idmapp-network
+
+  idm-react-app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8090
+    restart: unless-stopped
+    networks:
+      - idm-network
+
+volumes:
+  postgres_data:
+
+networks:
+  idmapp-network:
+    driver: bridge
+  idm-network:
+    driver: bridge 
