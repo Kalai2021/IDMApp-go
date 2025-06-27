@@ -252,7 +252,7 @@ func (c *PKCEController) RefreshToken(ctx *gin.Context) {
 // GetPKCEConfig returns PKCE configuration for clients
 func (c *PKCEController) GetPKCEConfig(ctx *gin.Context) {
 	config := gin.H{
-		"issuer": "http://localhost:8090",
+		"issuer": "http://localhost:8080",
 		"pkce": gin.H{
 			"code_challenge_method": "S256",
 			"supported_scopes": []string{
@@ -289,7 +289,7 @@ func (c *PKCEController) GetJWKS(ctx *gin.Context) {
 
 // GetOIDCConfig returns the OIDC discovery document
 func (c *PKCEController) GetOIDCConfig(ctx *gin.Context) {
-	issuer := "http://localhost:8090"
+	issuer := "http://localhost:8080"
 	ctx.JSON(200, gin.H{
 		"issuer":                                issuer,
 		"authorization_endpoint":                issuer + "/api/v1/auth/pkce/authorize",

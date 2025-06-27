@@ -1,31 +1,51 @@
 # Build stage
-FROM node:18-alpine as build
+FROM golang:1.24-alpine AS builder
 
+# Install git and ca-certificates (needed for go mod download)
+RUN apk add --no-cache git ca-certificates
+
+# Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy go mod files
+COPY go.mod go.sum ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Download dependencies
+RUN go mod download
 
 # Copy source code
 COPY . .
 
-# Build the app
-RUN npm run build
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o idmapp-go .
 
-# Production stage
-FROM nginx:alpine
+# Final stage
+FROM alpine:latest
 
-# Copy built app from build stage
-COPY --from=build /app/build /usr/share/nginx/html
+# Install ca-certificates for HTTPS requests
+RUN apk --no-cache add ca-certificates
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Create non-root user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+# Set working directory
+WORKDIR /app
+
+# Copy the binary from builder stage
+COPY --from=builder /app/idmapp-go .
+
+# Copy templates directory
+COPY --from=builder /app/templates ./templates
+
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup .
+
+# Switch to non-root user
+USER appuser
 
 # Expose port
-EXPOSE 3000
+EXPOSE 8080
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"] 
+# Run the application
+CMD ["./idmapp-go"] 
