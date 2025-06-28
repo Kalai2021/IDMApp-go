@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(router *gin.Engine, auth0Domain, auth0Audience string) {
+func SetupRoutes(router *gin.Engine) {
 	// Serve static files
 	router.Static("/static", "./templates")
 	router.StaticFile("/test.html", "./test.html")
@@ -70,7 +70,7 @@ func SetupRoutes(router *gin.Engine, auth0Domain, auth0Audience string) {
 
 		// Protected routes (authentication required)
 		protected := v1.Group("")
-		protected.Use(middleware.AuthMiddleware(auth0Domain, auth0Audience))
+		protected.Use(middleware.AuthMiddleware())
 		{
 			// User routes
 			users := protected.Group("/users")

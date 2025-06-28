@@ -4,11 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/url"
-	"os"
 	"time"
 
 	"idmapp-go/dto"
@@ -185,28 +181,43 @@ func (s *PKCEService) ValidatePKCEFlow(req dto.PKCEAuthRequest) error {
 
 // RefreshToken refreshes an access token using a refresh token
 func (s *PKCEService) RefreshToken(refreshToken string, clientID string) (*dto.PKCETokenResponse, error) {
-	tokenData := url.Values{}
-	tokenData.Set("grant_type", "refresh_token")
-	tokenData.Set("client_id", clientID)
-	tokenData.Set("refresh_token", refreshToken)
-
-	tokenURL := fmt.Sprintf("https://%s/oauth/token", os.Getenv("AUTH0_DOMAIN"))
-	resp, err := http.PostForm(tokenURL, tokenData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to refresh token: %w", err)
-	}
-	defer resp.Body.Close()
-
-	var tokenResp dto.PKCETokenResponse
-	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
-		var errorResp dto.PKCEErrorResponse
-		if json.NewDecoder(resp.Body).Decode(&errorResp) == nil {
-			return nil, fmt.Errorf("auth0 error: %s - %s", errorResp.Error, errorResp.ErrorDescription)
+	// Parse and validate the refresh token
+	token, err := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
+		// Validate the signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return nil, fmt.Errorf("failed to decode refresh token response: %w", err)
+		return jwtSigningKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, fmt.Errorf("invalid refresh token")
 	}
 
-	return &tokenResp, nil
+	// Extract claims from refresh token
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	// Get user ID from claims
+	userID, ok := claims["sub"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid user ID in token")
+	}
+
+	// Generate new access token
+	accessToken, err := s.GenerateAccessToken(userID, claims["email"].(string))
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	return &dto.PKCETokenResponse{
+		AccessToken: accessToken,
+		TokenType:   "Bearer",
+		ExpiresIn:   3600,
+		Scope:       "openid profile email",
+	}, nil
 }
 
 // GenerateAccessToken generates a JWT access token for a user

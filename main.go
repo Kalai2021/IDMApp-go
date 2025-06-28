@@ -69,7 +69,7 @@ func main() {
 	})
 
 	// Setup routes
-	routes.SetupRoutes(router, cfg.Auth0.Domain, cfg.Auth0.Audience)
+	routes.SetupRoutes(router)
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)

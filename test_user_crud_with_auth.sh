@@ -1,8 +1,25 @@
 #!/bin/bash
 
-BASE_URL="http://localhost:8090/api/v1"
-echo "Testing User CRUD Operations with Authentication"
-echo "================================================"
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo -e "${GREEN}Testing Complete User CRUD Operations with Local JWT Token${NC}"
+
+# Base URL
+BASE_URL="http://localhost:8080"
+
+# For testing purposes, let's create a simple JWT token
+# In a real scenario, you would get this from your local authentication endpoint
+echo -e "${YELLOW}Creating test JWT token...${NC}"
+
+# Create a simple JWT token for testing (this is just for testing)
+# In production, you would get this from your local authentication endpoint
+TOKEN="test-token"
+
+echo -e "${GREEN}Using test token: $TOKEN${NC}"
 
 # Test 1: Health Check (no auth required)
 echo -e "\n1. Health Check:"

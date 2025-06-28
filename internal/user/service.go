@@ -1,14 +1,11 @@
 package user
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"os"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -140,33 +137,6 @@ func (s *UserService) DeleteUser(id uuid.UUID) error {
 	return nil
 }
 
-func getAuth0Token(email, password string) (string, error) {
-	data := map[string]string{
-		"grant_type":    "password",
-		"username":      email,
-		"password":      password,
-		"audience":      os.Getenv("AUTH0_AUDIENCE"),
-		"scope":         "openid profile email",
-		"client_id":     os.Getenv("AUTH0_CLIENT_ID"),
-		"client_secret": os.Getenv("AUTH0_CLIENT_SECRET"),
-	}
-	jsonData, _ := json.Marshal(data)
-	resp, err := http.Post("https://"+os.Getenv("AUTH0_DOMAIN")+"/oauth/token", "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	var result map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", err
-	}
-	token, ok := result["access_token"].(string)
-	if !ok {
-		return "", fmt.Errorf("no access_token in response: %v", result)
-	}
-	return token, nil
-}
-
 func (s *UserService) Authenticate(req LoginRequest) (*AuthResponse, error) {
 	var user User
 	result := s.db.Where("email = ?", req.Email).First(&user)
@@ -187,9 +157,17 @@ func (s *UserService) Authenticate(req LoginRequest) (*AuthResponse, error) {
 		return nil, errors.New("invalid credentials")
 	}
 
-	token, err := getAuth0Token(req.Email, req.Password)
+	// Generate local JWT token
+	claims := jwt.MapClaims{
+		"sub":   user.ID.String(),
+		"email": user.Email,
+		"exp":   time.Now().Add(1 * time.Hour).Unix(),
+		"iat":   time.Now().Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signedToken, err := token.SignedString([]byte("your-256-bit-secret")) // Use same key as middleware
 	if err != nil {
-		return nil, fmt.Errorf("failed to get Auth0 token: %w", err)
+		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
 	userResponse := UserResponse{
@@ -204,7 +182,7 @@ func (s *UserService) Authenticate(req LoginRequest) (*AuthResponse, error) {
 	}
 
 	return &AuthResponse{
-		Token: token,
+		Token: signedToken,
 		User:  userResponse,
 	}, nil
 }
