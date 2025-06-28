@@ -13,6 +13,7 @@ type Config struct {
 	Auth0    Auth0Config
 	OpenFGA  OpenFGAConfig
 	Server   ServerConfig
+	Logging  LoggingConfig
 }
 
 type DatabaseConfig struct {
@@ -39,6 +40,11 @@ type OpenFGAConfig struct {
 type ServerConfig struct {
 	Port     int
 	LogLevel string
+}
+
+type LoggingConfig struct {
+	FluentEnabled  bool
+	FluentEndpoint string
 }
 
 func Load() (*Config, error) {
@@ -77,6 +83,12 @@ func Load() (*Config, error) {
 	config.Server = ServerConfig{
 		Port:     serverPort,
 		LogLevel: getEnv("LOG_LEVEL", "info"),
+	}
+
+	// Logging config
+	config.Logging = LoggingConfig{
+		FluentEnabled:  getEnv("FLUENT_ENABLED", "false") == "true",
+		FluentEndpoint: getEnv("FLUENT_ENDPOINT", "http://localhost:24224"),
 	}
 
 	return config, nil

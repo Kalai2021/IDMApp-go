@@ -7,7 +7,9 @@ import (
 
 	"idmapp-go/config"
 	"idmapp-go/database"
+	"idmapp-go/middleware"
 	"idmapp-go/routes"
+	"idmapp-go/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -19,6 +21,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
+
+	// Initialize Fluentd logger
+	services.InitFluentLogger()
 
 	// Set log level
 	level, err := logrus.ParseLevel(cfg.Server.LogLevel)
@@ -45,6 +50,10 @@ func main() {
 	// Load HTML templates
 	router.LoadHTMLGlob("templates/*")
 
+	// Add logging middleware
+	router.Use(middleware.LoggingMiddleware())
+	router.Use(middleware.ErrorLoggingMiddleware())
+
 	// Add CORS middleware
 	router.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
@@ -65,6 +74,14 @@ func main() {
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
 	logrus.Infof("Starting IDM App server on port %d", cfg.Server.Port)
+
+	// Log server startup
+	logger := services.GetFluentLogger()
+	logger.Info("Server starting", map[string]interface{}{
+		"port":      cfg.Server.Port,
+		"log_level": cfg.Server.LogLevel,
+		"mode":      gin.Mode(),
+	})
 
 	if err := router.Run(addr); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

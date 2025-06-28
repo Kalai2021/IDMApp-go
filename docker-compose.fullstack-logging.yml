@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  # Go Backend with Fluentd logging
+  idm-backend:
+    build: .
+    container_name: idm-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=5432
+      - DB_NAME=iamdb
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - SERVER_PORT=8080
+      - LOG_LEVEL=info
+      - FLUENT_ENABLED=true
+      - FLUENT_ENDPOINT=http://fluentd:24224
+    volumes:
+      - ./.env:/root/.env:ro
+    networks:
+      - idm-network
+    restart: unless-stopped
+    depends_on:
+      - fluentd
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # React Frontend with Fluentd logging
+  idm-react-client:
+    build:
+      context: ../IDMReactClient
+      dockerfile: Dockerfile
+    container_name: idm-react-client
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
+      - REACT_APP_FLUENT_ENDPOINT=http://fluentd:24224
+      - REACT_APP_LOGGING_ENABLED=true
+      - NODE_ENV=development
+    depends_on:
+      - idm-backend
+      - fluentd
+    networks:
+      - idm-network
+    restart: unless-stopped
+
+  # Fluentd - Log Aggregation
+  fluentd:
+    build:
+      context: ./fluentd
+      dockerfile: Dockerfile
+    container_name: idm-fluentd
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    volumes:
+      - ./fluentd/conf/fluent.conf:/fluentd/etc/fluent.conf
+      - fluentd_logs:/fluentd/log
+    environment:
+      - FLUENTD_CONF=fluent.conf
+    networks:
+      - idm-network
+    restart: unless-stopped
+
+  # Elasticsearch - Log Storage
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: idm-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - cluster.name=idm-cluster
+      - node.name=idm-node-1
+      - bootstrap.memory_lock=true
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - idm-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+
+  # Kibana - Log Visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: idm-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - XPACK_SECURITY_ENABLED=false
+      - SERVER_NAME=idm-kibana
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - idm-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+volumes:
+  elasticsearch_data:
+    driver: local
+  fluentd_logs:
+    driver: local
+
+networks:
+  idm-network:
+    driver: bridge 
