@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"idmapp-go/config"
 	"idmapp-go/database"
@@ -12,7 +14,6 @@ import (
 	"idmapp-go/services"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -25,12 +26,26 @@ func main() {
 	// Initialize Fluentd logger
 	services.InitFluentLogger()
 
-	// Set log level
-	level, err := logrus.ParseLevel(cfg.Server.LogLevel)
-	if err != nil {
-		level = logrus.InfoLevel
+	// Set up slog logger
+	var level slog.Level
+	switch cfg.Server.LogLevel {
+	case "debug":
+		level = slog.LevelDebug
+	case "info":
+		level = slog.LevelInfo
+	case "warn":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
 	}
-	logrus.SetLevel(level)
+
+	// Create slog logger with JSON handler
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: level,
+	}))
+	slog.SetDefault(logger)
 
 	// Initialize database
 	if err := database.InitDB(cfg); err != nil {
@@ -73,11 +88,11 @@ func main() {
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
-	logrus.Infof("Starting IDM App server on port %d", cfg.Server.Port)
+	slog.Info("Starting IDM App server", "port", cfg.Server.Port)
 
 	// Log server startup
-	logger := services.GetFluentLogger()
-	logger.Info("Server starting", map[string]interface{}{
+	fluentLogger := services.GetFluentLogger()
+	fluentLogger.Info("Server starting", map[string]interface{}{
 		"port":      cfg.Server.Port,
 		"log_level": cfg.Server.LogLevel,
 		"mode":      gin.Mode(),

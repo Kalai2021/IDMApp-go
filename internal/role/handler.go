@@ -1,29 +1,29 @@
 package role
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 type RoleController struct {
 	roleService *RoleService
-	logger      *logrus.Logger
+	logger      *slog.Logger
 }
 
 func NewRoleController(roleService *RoleService) *RoleController {
 	return &RoleController{
 		roleService: roleService,
-		logger:      logrus.New(),
+		logger:      slog.Default(),
 	}
 }
 
 func (c *RoleController) GetAllRoles(ctx *gin.Context) {
 	roles, err := c.roleService.GetAllRoles()
 	if err != nil {
-		c.logger.Errorf("Failed to get roles: %v", err)
+		c.logger.Error("Failed to get roles", "error", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get roles"})
 		return
 	}
@@ -41,7 +41,7 @@ func (c *RoleController) GetRole(ctx *gin.Context) {
 
 	role, err := c.roleService.GetRole(id)
 	if err != nil {
-		c.logger.Errorf("Failed to get role: %v", err)
+		c.logger.Error("Failed to get role", "error", err, "roleID", id)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get role"})
 		return
 	}
@@ -63,7 +63,7 @@ func (c *RoleController) CreateRole(ctx *gin.Context) {
 
 	role, err := c.roleService.CreateRole(req)
 	if err != nil {
-		c.logger.Errorf("Failed to create role: %v", err)
+		c.logger.Error("Failed to create role", "error", err, "name", req.Name)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -87,7 +87,7 @@ func (c *RoleController) UpdateRole(ctx *gin.Context) {
 
 	role, err := c.roleService.UpdateRole(id, req)
 	if err != nil {
-		c.logger.Errorf("Failed to update role: %v", err)
+		c.logger.Error("Failed to update role", "error", err, "roleID", id)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -110,7 +110,7 @@ func (c *RoleController) DeleteRole(ctx *gin.Context) {
 
 	err = c.roleService.DeleteRole(id)
 	if err != nil {
-		c.logger.Errorf("Failed to delete role: %v", err)
+		c.logger.Error("Failed to delete role", "error", err, "roleID", id)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

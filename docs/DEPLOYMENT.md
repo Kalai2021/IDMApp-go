@@ -238,7 +238,7 @@ sudo systemctl restart postgresql
 ## Monitoring and Logging
 
 ### Application Logs
-The application uses structured logging with Logrus. Configure log levels appropriately:
+The application uses structured logging with Go's built-in slog package. Configure log levels appropriately:
 
 ```bash
 # Development

@@ -1,24 +1,24 @@
 package controllers
 
 import (
+	"log/slog"
 	"net/http"
 
 	"idmapp-go/dto"
 	"idmapp-go/services"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 type UserGroupMemberController struct {
 	service *services.UserGroupMemberService
-	logger  *logrus.Logger
+	logger  *slog.Logger
 }
 
 func NewUserGroupMemberController(service *services.UserGroupMemberService) *UserGroupMemberController {
 	return &UserGroupMemberController{
 		service: service,
-		logger:  logrus.New(),
+		logger:  slog.Default(),
 	}
 }
 
@@ -32,7 +32,7 @@ func (c *UserGroupMemberController) HandleMemberOperation(ctx *gin.Context) {
 	if req.Op == 1 { // ADD
 		member, err := c.service.AddMember(req.GroupID, req.UserID)
 		if err != nil {
-			c.logger.Errorf("Failed to add user group member: %v", err)
+			c.logger.Error("Failed to add user group member", "error", err, "groupID", req.GroupID, "userID", req.UserID)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -41,7 +41,7 @@ func (c *UserGroupMemberController) HandleMemberOperation(ctx *gin.Context) {
 	} else if req.Op == 2 { // REMOVE
 		removed, err := c.service.RemoveMember(req.GroupID, req.UserID)
 		if err != nil {
-			c.logger.Errorf("Failed to remove user group member: %v", err)
+			c.logger.Error("Failed to remove user group member", "error", err, "groupID", req.GroupID, "userID", req.UserID)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -53,4 +53,4 @@ func (c *UserGroupMemberController) HandleMemberOperation(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid operation code"})
-} 
+}

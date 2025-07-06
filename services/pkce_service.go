@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"idmapp-go/dto"
@@ -13,20 +14,19 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
 var jwtSigningKey = []byte("your-256-bit-secret") // Replace with a secure key in production
 
 type PKCEService struct {
-	logger *logrus.Logger
+	logger *slog.Logger
 	db     *gorm.DB
 }
 
 func NewPKCEService(db *gorm.DB) *PKCEService {
 	return &PKCEService{
-		logger: logrus.New(),
+		logger: slog.Default(),
 		db:     db,
 	}
 }
@@ -94,7 +94,7 @@ func (s *PKCEService) CreateAuthorizationCode(req dto.PKCEAuthRequest, userID *u
 // ExchangeCodeForToken validates the code and code_verifier, then issues a JWT
 func (s *PKCEService) ExchangeCodeForToken(req dto.PKCETokenRequest) (*dto.PKCETokenResponse, error) {
 	s.logger.Info("=== EXCHANGE CODE FOR TOKEN CALLED ===")
-	s.logger.Infof("Received request: %+v", req)
+	s.logger.Info("Received request", "request", req)
 
 	var pkceCode pkce.PKCECode
 	if err := s.db.Where("code = ? AND client_id = ? AND redirect_uri = ? AND used = false", req.Code, req.ClientID, req.RedirectURI).First(&pkceCode).Error; err != nil {
@@ -111,9 +111,9 @@ func (s *PKCEService) ExchangeCodeForToken(req dto.PKCETokenRequest) (*dto.PKCET
 
 	if pkceCode.CodeChallengeMethod == "S256" {
 		challenge := s.GenerateCodeChallenge(req.CodeVerifier)
-		s.logger.Debugf("Code verifier received: %s", req.CodeVerifier)
-		s.logger.Debugf("Generated challenge: %s", challenge)
-		s.logger.Debugf("Stored challenge: %s", pkceCode.CodeChallenge)
+		s.logger.Debug("Code verifier received", "code_verifier", req.CodeVerifier)
+		s.logger.Debug("Generated challenge", "challenge", challenge)
+		s.logger.Debug("Stored challenge", "stored_challenge", pkceCode.CodeChallenge)
 		if challenge != pkceCode.CodeChallenge {
 			return nil, fmt.Errorf("invalid code_verifier for S256")
 		}

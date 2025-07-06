@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-
-	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -40,9 +38,6 @@ type LoggingConfig struct {
 }
 
 func Load() (*Config, error) {
-	// Load .env file if it exists
-	godotenv.Load()
-
 	config := &Config{}
 
 	// Database config

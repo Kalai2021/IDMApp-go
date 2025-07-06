@@ -1,35 +1,34 @@
 package user
 
 import (
+	"log/slog"
 	"net/http"
-
 	"net/url"
 
 	"idmapp-go/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 type UserController struct {
 	userService *UserService
 	pkceService *services.PKCEService
-	logger      *logrus.Logger
+	logger      *slog.Logger
 }
 
 func NewUserController(userService *UserService, pkceService *services.PKCEService) *UserController {
 	return &UserController{
 		userService: userService,
 		pkceService: pkceService,
-		logger:      logrus.New(),
+		logger:      slog.Default(),
 	}
 }
 
 func (c *UserController) GetAllUsers(ctx *gin.Context) {
 	users, err := c.userService.GetAllUsers()
 	if err != nil {
-		c.logger.Errorf("Failed to get users: %v", err)
+		c.logger.Error("Failed to get users", "error", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get users"})
 		return
 	}
@@ -47,7 +46,7 @@ func (c *UserController) GetUser(ctx *gin.Context) {
 
 	user, err := c.userService.GetUser(id)
 	if err != nil {
-		c.logger.Errorf("Failed to get user: %v", err)
+		c.logger.Error("Failed to get user", "error", err, "userID", id)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
 		return
 	}
@@ -69,7 +68,7 @@ func (c *UserController) CreateUser(ctx *gin.Context) {
 
 	user, err := c.userService.CreateUser(req)
 	if err != nil {
-		c.logger.Errorf("Failed to create user: %v", err)
+		c.logger.Error("Failed to create user", "error", err, "email", req.Email)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -93,7 +92,7 @@ func (c *UserController) UpdateUser(ctx *gin.Context) {
 
 	user, err := c.userService.UpdateUser(id, req)
 	if err != nil {
-		c.logger.Errorf("Failed to update user: %v", err)
+		c.logger.Error("Failed to update user", "error", err, "userID", id)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -116,7 +115,7 @@ func (c *UserController) DeleteUser(ctx *gin.Context) {
 
 	err = c.userService.DeleteUser(id)
 	if err != nil {
-		c.logger.Errorf("Failed to delete user: %v", err)
+		c.logger.Error("Failed to delete user", "error", err, "userID", id)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -134,7 +133,7 @@ func (c *UserController) Login(ctx *gin.Context) {
 	// Use the new local authentication method
 	user, err := c.userService.AuthenticateUser(req.Email, req.Password)
 	if err != nil {
-		c.logger.Errorf("Authentication failed: %v", err)
+		c.logger.Error("Authentication failed", "error", err, "email", req.Email)
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
@@ -142,7 +141,7 @@ func (c *UserController) Login(ctx *gin.Context) {
 	// Generate a JWT token for the user (using the same method as PKCE service)
 	token, err := c.pkceService.GenerateAccessToken(user.ID.String(), user.Email)
 	if err != nil {
-		c.logger.Errorf("Failed to generate token: %v", err)
+		c.logger.Error("Failed to generate token", "error", err, "userID", user.ID)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}

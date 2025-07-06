@@ -32,8 +32,6 @@ A complete Identity Management (IDM) system with Go backend, React frontend, and
 
 - 🔐 **Authentication**: Secure login with token-based authentication
 - 👥 **User Management**: Complete CRUD operations for users
-- 🎨 **Modern UI**: Clean, responsive design with Material Design principles
-- 📱 **Mobile Friendly**: Responsive design that works on all devices
 - 🔒 **Protected Routes**: Automatic redirection for unauthenticated users
 - 🚀 **Docker Ready**: Containerized deployment with Docker
 - 📊 **Centralized Logging**: Complete ELK stack integration
@@ -42,7 +40,6 @@ A complete Identity Management (IDM) system with Go backend, React frontend, and
 
 ## Prerequisites
 
-- Node.js 18+ 
 - Go 1.24+
 - Docker and Docker Compose
 - PostgreSQL database
@@ -253,7 +250,6 @@ The application connects to a PostgreSQL database:
 IDMApp-go/
 ├── docker-compose.fullstack-logging.yml  # Complete stack with logging
 ├── docker-compose.fullstack.yml          # Stack without logging
-├── docker-compose.logging.yml            # Backend with logging only
 ├── services/
 │   └── fluent_logger.go                  # Fluentd logger service
 ├── middleware/
@@ -354,7 +350,6 @@ docker build -t idm-frontend ../IDMReactClient
 
 - **`docker-compose.fullstack-logging.yml`**: Complete stack with ELK logging
 - **`docker-compose.fullstack.yml`**: Stack without logging infrastructure
-- **`docker-compose.logging.yml`**: Backend with logging only
 
 ## API Integration
 

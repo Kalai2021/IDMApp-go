@@ -3,15 +3,15 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/openfga/go-sdk/client"
 	"github.com/openfga/go-sdk/credentials"
-	"github.com/sirupsen/logrus"
 )
 
 type AuthorizationService struct {
 	fgaClient *client.OpenFgaClient
-	logger    *logrus.Logger
+	logger    *slog.Logger
 }
 
 func NewAuthorizationService(apiURL, storeID, apiToken string) (*AuthorizationService, error) {
@@ -31,7 +31,7 @@ func NewAuthorizationService(apiURL, storeID, apiToken string) (*AuthorizationSe
 
 	return &AuthorizationService{
 		fgaClient: fgaClient,
-		logger:    logrus.New(),
+		logger:    slog.Default(),
 	}, nil
 }
 
@@ -44,12 +44,12 @@ func (s *AuthorizationService) CheckAccess(userID, relation, resourceID string) 
 
 	resp, err := s.fgaClient.Check(context.Background()).Body(body).Execute()
 	if err != nil {
-		s.logger.Errorf("Error checking permission for user: %s, relation: %s, resource: %s, error: %v", userID, relation, resourceID, err)
+		s.logger.Error("Error checking permission", "user", userID, "relation", relation, "resource", resourceID, "error", err)
 		return false
 	}
 
 	allowed := resp.GetAllowed()
-	s.logger.Debugf("Permission check: %s %s %s -> %s", userID, relation, resourceID, map[bool]string{true: "ALLOWED", false: "DENIED"}[allowed])
+	s.logger.Debug("Permission check", "user", userID, "relation", relation, "resource", resourceID, "result", map[bool]string{true: "ALLOWED", false: "DENIED"}[allowed])
 	return allowed
 }
 
@@ -65,11 +65,11 @@ func (s *AuthorizationService) GrantPermission(userID, relation, resourceID stri
 
 	_, err := s.fgaClient.Write(context.Background()).Body(body).Execute()
 	if err != nil {
-		s.logger.Errorf("Error granting permission for user: %s, relation: %s, resource: %s, error: %v", userID, relation, resourceID, err)
+		s.logger.Error("Error granting permission", "user", userID, "relation", relation, "resource", resourceID, "error", err)
 		return false
 	}
 
-	s.logger.Infof("Granted permission: %s %s %s", userID, relation, resourceID)
+	s.logger.Info("Granted permission", "user", userID, "relation", relation, "resource", resourceID)
 	return true
 }
 
@@ -85,11 +85,11 @@ func (s *AuthorizationService) RevokePermission(userID, relation, resourceID str
 
 	_, err := s.fgaClient.Write(context.Background()).Body(body).Execute()
 	if err != nil {
-		s.logger.Errorf("Error revoking permission for user: %s, relation: %s, resource: %s, error: %v", userID, relation, resourceID, err)
+		s.logger.Error("Error revoking permission", "user", userID, "relation", relation, "resource", resourceID, "error", err)
 		return false
 	}
 
-	s.logger.Infof("Revoked permission: %s %s %s", userID, relation, resourceID)
+	s.logger.Info("Revoked permission", "user", userID, "relation", relation, "resource", resourceID)
 	return true
 }
 

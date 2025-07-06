@@ -3,24 +3,24 @@ package user
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 type UserService struct {
 	db     *gorm.DB
-	logger *logrus.Logger
+	logger *slog.Logger
 }
 
 func NewUserService(db *gorm.DB) *UserService {
 	return &UserService{
 		db:     db,
-		logger: logrus.New(),
+		logger: slog.Default(),
 	}
 }
 

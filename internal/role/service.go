@@ -3,22 +3,22 @@ package role
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
 type RoleService struct {
 	db     *gorm.DB
-	logger *logrus.Logger
+	logger *slog.Logger
 }
 
 func NewRoleService(db *gorm.DB) *RoleService {
 	return &RoleService{
 		db:     db,
-		logger: logrus.New(),
+		logger: slog.Default(),
 	}
 }
 

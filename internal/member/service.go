@@ -3,24 +3,24 @@ package member
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"idmapp-go/dto"
 
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
 type MemberService struct {
 	db     *gorm.DB
-	logger *logrus.Logger
+	logger *slog.Logger
 }
 
 func NewMemberService(db *gorm.DB) *MemberService {
 	return &MemberService{
 		db:     db,
-		logger: logrus.New(),
+		logger: slog.Default(),
 	}
 }
 

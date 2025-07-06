@@ -2,12 +2,12 @@ package middleware
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/sirupsen/logrus"
 )
 
 type Claims struct {
@@ -46,7 +46,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		// Parse token without validation first to get the algorithm
 		token, _, err := new(jwt.Parser).ParseUnverified(tokenString, &Claims{})
 		if err != nil {
-			logrus.Errorf("Failed to parse token: %v", err)
+			slog.Error("Failed to parse token", "error", err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token format"})
 			c.Abort()
 			return
@@ -77,7 +77,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		})
 
 		if err != nil {
-			logrus.Errorf("Failed to validate token: %v", err)
+			slog.Error("Failed to validate token", "error", err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return

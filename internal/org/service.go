@@ -3,22 +3,22 @@ package org
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
 type OrgService struct {
 	db     *gorm.DB
-	logger *logrus.Logger
+	logger *slog.Logger
 }
 
 func NewOrgService(db *gorm.DB) *OrgService {
 	return &OrgService{
 		db:     db,
-		logger: logrus.New(),
+		logger: slog.Default(),
 	}
 }
 

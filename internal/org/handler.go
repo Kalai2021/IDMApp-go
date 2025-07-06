@@ -1,29 +1,29 @@
 package org
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 type OrgController struct {
 	orgService *OrgService
-	logger     *logrus.Logger
+	logger     *slog.Logger
 }
 
 func NewOrgController(orgService *OrgService) *OrgController {
 	return &OrgController{
 		orgService: orgService,
-		logger:     logrus.New(),
+		logger:     slog.Default(),
 	}
 }
 
 func (c *OrgController) GetAllOrgs(ctx *gin.Context) {
 	orgs, err := c.orgService.GetAllOrgs()
 	if err != nil {
-		c.logger.Errorf("Failed to get organizations: %v", err)
+		c.logger.Error("Failed to get organizations", "error", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get organizations"})
 		return
 	}
@@ -41,7 +41,7 @@ func (c *OrgController) GetOrg(ctx *gin.Context) {
 
 	org, err := c.orgService.GetOrg(id)
 	if err != nil {
-		c.logger.Errorf("Failed to get organization: %v", err)
+		c.logger.Error("Failed to get organization", "error", err, "orgID", id)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get organization"})
 		return
 	}
@@ -63,7 +63,7 @@ func (c *OrgController) CreateOrg(ctx *gin.Context) {
 
 	org, err := c.orgService.CreateOrg(req)
 	if err != nil {
-		c.logger.Errorf("Failed to create organization: %v", err)
+		c.logger.Error("Failed to create organization", "error", err, "name", req.Name)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -87,7 +87,7 @@ func (c *OrgController) UpdateOrg(ctx *gin.Context) {
 
 	org, err := c.orgService.UpdateOrg(id, req)
 	if err != nil {
-		c.logger.Errorf("Failed to update organization: %v", err)
+		c.logger.Error("Failed to update organization", "error", err, "orgID", id)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -110,7 +110,7 @@ func (c *OrgController) DeleteOrg(ctx *gin.Context) {
 
 	err = c.orgService.DeleteOrg(id)
 	if err != nil {
-		c.logger.Errorf("Failed to delete organization: %v", err)
+		c.logger.Error("Failed to delete organization", "error", err, "orgID", id)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

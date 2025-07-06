@@ -3,22 +3,22 @@ package group
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
 type GroupService struct {
 	db     *gorm.DB
-	logger *logrus.Logger
+	logger *slog.Logger
 }
 
 func NewGroupService(db *gorm.DB) *GroupService {
 	return &GroupService{
 		db:     db,
-		logger: logrus.New(),
+		logger: slog.Default(),
 	}
 }
 

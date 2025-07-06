@@ -1,29 +1,29 @@
 package group
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 type GroupController struct {
 	groupService *GroupService
-	logger       *logrus.Logger
+	logger       *slog.Logger
 }
 
 func NewGroupController(groupService *GroupService) *GroupController {
 	return &GroupController{
 		groupService: groupService,
-		logger:       logrus.New(),
+		logger:       slog.Default(),
 	}
 }
 
 func (c *GroupController) GetAllGroups(ctx *gin.Context) {
 	groups, err := c.groupService.GetAllGroups()
 	if err != nil {
-		c.logger.Errorf("Failed to get groups: %v", err)
+		c.logger.Error("Failed to get groups", "error", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get groups"})
 		return
 	}
@@ -41,7 +41,7 @@ func (c *GroupController) GetGroup(ctx *gin.Context) {
 
 	group, err := c.groupService.GetGroup(id)
 	if err != nil {
-		c.logger.Errorf("Failed to get group: %v", err)
+		c.logger.Error("Failed to get group", "error", err, "groupID", id)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get group"})
 		return
 	}
@@ -63,7 +63,7 @@ func (c *GroupController) CreateGroup(ctx *gin.Context) {
 
 	group, err := c.groupService.CreateGroup(req)
 	if err != nil {
-		c.logger.Errorf("Failed to create group: %v", err)
+		c.logger.Error("Failed to create group", "error", err, "name", req.Name)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -87,7 +87,7 @@ func (c *GroupController) UpdateGroup(ctx *gin.Context) {
 
 	group, err := c.groupService.UpdateGroup(id, req)
 	if err != nil {
-		c.logger.Errorf("Failed to update group: %v", err)
+		c.logger.Error("Failed to update group", "error", err, "groupID", id)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -110,7 +110,7 @@ func (c *GroupController) DeleteGroup(ctx *gin.Context) {
 
 	err = c.groupService.DeleteGroup(id)
 	if err != nil {
-		c.logger.Errorf("Failed to delete group: %v", err)
+		c.logger.Error("Failed to delete group", "error", err, "groupID", id)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

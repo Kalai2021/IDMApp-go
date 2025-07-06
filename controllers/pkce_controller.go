@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -11,27 +12,26 @@ import (
 	"idmapp-go/services"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 type PKCEController struct {
 	pkceService *services.PKCEService
 	userService *user.UserService
-	logger      *logrus.Logger
+	logger      *slog.Logger
 }
 
 func NewPKCEController(pkceService *services.PKCEService, userService *user.UserService) *PKCEController {
 	return &PKCEController{
 		pkceService: pkceService,
 		userService: userService,
-		logger:      logrus.New(),
+		logger:      slog.Default(),
 	}
 }
 
 // Shared handler for PKCE authorization logic
 func (c *PKCEController) handlePKCEAuth(ctx *gin.Context, req dto.PKCEAuthRequest) {
 	if err := c.pkceService.ValidatePKCEFlow(req); err != nil {
-		c.logger.Errorf("PKCE validation failed: %v", err)
+		c.logger.Error("PKCE validation failed", "error", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -39,20 +39,20 @@ func (c *PKCEController) handlePKCEAuth(ctx *gin.Context, req dto.PKCEAuthReques
 	var user *user.User
 	userEmail, err := ctx.Cookie("session_user")
 	if err != nil || userEmail == "" {
-		c.logger.Errorf("No authenticated user in session for PKCE authorize")
+		c.logger.Error("No authenticated user in session for PKCE authorize")
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 	user, err = c.userService.GetUserByEmail(userEmail)
 	if err != nil || user == nil {
-		c.logger.Errorf("Failed to get user for PKCE authorize: %v", err)
+		c.logger.Error("Failed to get user for PKCE authorize", "error", err)
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 		return
 	}
 	// Use the real user ID for PKCE code generation
 	code, state, codeVerifier, err := c.pkceService.CreateAuthorizationCode(req, &user.ID)
 	if err != nil {
-		c.logger.Errorf("Failed to create authorization code: %v", err)
+		c.logger.Error("Failed to create authorization code", "error", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create authorization code"})
 		return
 	}
@@ -70,7 +70,7 @@ func (c *PKCEController) handlePKCEAuth(ctx *gin.Context, req dto.PKCEAuthReques
 func (c *PKCEController) InitiatePKCEAuth(ctx *gin.Context) {
 	var req dto.PKCEAuthRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		c.logger.Errorf("Invalid PKCE auth request: %v", err)
+		c.logger.Error("Invalid PKCE auth request", "error", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -81,16 +81,16 @@ func (c *PKCEController) InitiatePKCEAuth(ctx *gin.Context) {
 func (c *PKCEController) InitiatePKCEAuthGET(ctx *gin.Context) {
 	// Check for session cookie
 	userEmail, err := ctx.Cookie("session_user")
-	c.logger.Debug("Session user in Initiate PKCE AuthGET " + userEmail)
-	c.logger.Debug("All cookies: " + fmt.Sprintf("%v", ctx.Request.Cookies()))
+	c.logger.Debug("Session user in Initiate PKCE AuthGET", "user_email", userEmail)
+	c.logger.Debug("All cookies", "cookies", ctx.Request.Cookies())
 
 	if err != nil || userEmail == "" {
 		// Check if this is a browser request or API request
 		acceptHeader := ctx.GetHeader("Accept")
 		userAgent := ctx.GetHeader("User-Agent")
 
-		c.logger.Debugf("Accept header: %s", acceptHeader)
-		c.logger.Debugf("User-Agent: %s", userAgent)
+		c.logger.Debug("Accept header", "accept", acceptHeader)
+		c.logger.Debug("User-Agent", "userAgent", userAgent)
 
 		// Consider it a browser request if:
 		// 1. Accept header contains text/html, OR
@@ -104,12 +104,12 @@ func (c *PKCEController) InitiatePKCEAuthGET(ctx *gin.Context) {
 				strings.Contains(userAgent, "Edge"))) ||
 			acceptHeader == ""
 
-		c.logger.Debugf("Is browser request: %v", isBrowserRequest)
+		c.logger.Debug("Is browser request", "isBrowser", isBrowserRequest)
 
 		if isBrowserRequest {
 			// Browser request - redirect to login
 			redirectURL := "/login?redirect=" + url.QueryEscape(ctx.Request.RequestURI)
-			c.logger.Debugf("Redirecting to login: %s", redirectURL)
+			c.logger.Debug("Redirecting to login", "redirectURL", redirectURL)
 			ctx.Redirect(http.StatusFound, redirectURL)
 			return
 		} else {
@@ -134,7 +134,7 @@ func (c *PKCEController) InitiatePKCEAuthGET(ctx *gin.Context) {
 
 	// Validate PKCE flow
 	if err := c.pkceService.ValidatePKCEFlow(req); err != nil {
-		c.logger.Errorf("PKCE validation failed: %v", err)
+		c.logger.Error("PKCE validation failed", "error", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -142,20 +142,20 @@ func (c *PKCEController) InitiatePKCEAuthGET(ctx *gin.Context) {
 	var user *user.User
 	userEmail, err = ctx.Cookie("session_user")
 	if err != nil || userEmail == "" {
-		c.logger.Errorf("No authenticated user in session for PKCE authorize")
+		c.logger.Error("No authenticated user in session for PKCE authorize")
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 	user, err = c.userService.GetUserByEmail(userEmail)
 	if err != nil || user == nil {
-		c.logger.Errorf("Failed to get user for PKCE authorize: %v", err)
+		c.logger.Error("Failed to get user for PKCE authorize", "error", err, "email", userEmail)
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 		return
 	}
 	// Use the real user ID for PKCE code generation
 	code, state, codeVerifier, err := c.pkceService.CreateAuthorizationCode(req, &user.ID)
 	if err != nil {
-		c.logger.Errorf("Failed to create authorization code: %v", err)
+		c.logger.Error("Failed to create authorization code", "error", err, "userID", user.ID)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create authorization code"})
 		return
 	}
@@ -192,23 +192,22 @@ func (c *PKCEController) ExchangeCodeForToken(ctx *gin.Context) {
 	var req dto.PKCETokenRequest
 
 	// Log the raw request for debugging
-	c.logger.Debugf("Token exchange request - Content-Type: %s", ctx.GetHeader("Content-Type"))
-	c.logger.Debugf("Token exchange request - Raw body: %s", ctx.Request.Body)
+	c.logger.Debug("Token exchange request", "contentType", ctx.GetHeader("Content-Type"))
 
 	// Accept both form-encoded and JSON payloads
 	if err := ctx.ShouldBind(&req); err != nil {
-		c.logger.Errorf("Form binding failed: %v", err)
+		c.logger.Error("Form binding failed", "error", err)
 		// Fallback to JSON
 		if err := ctx.ShouldBindJSON(&req); err != nil {
-			c.logger.Errorf("JSON binding also failed: %v", err)
-			c.logger.Errorf("Invalid token exchange request: %v", err)
+			c.logger.Error("JSON binding also failed", "error", err)
+			c.logger.Error("Invalid token exchange request", "error", err)
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 	}
 
 	// Log the parsed request
-	c.logger.Debugf("Parsed token request: %+v", req)
+	c.logger.Debug("Parsed token request", "request", req)
 
 	// Validate required fields
 	if req.GrantType != "authorization_code" {
@@ -224,7 +223,7 @@ func (c *PKCEController) ExchangeCodeForToken(ctx *gin.Context) {
 	// Exchange code for token
 	tokenResponse, err := c.pkceService.ExchangeCodeForToken(req)
 	if err != nil {
-		c.logger.Errorf("Token exchange failed: %v", err)
+		c.logger.Error("Token exchange failed", "error", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -240,7 +239,7 @@ func (c *PKCEController) RefreshToken(ctx *gin.Context) {
 	}
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		c.logger.Errorf("Invalid refresh token request: %v", err)
+		c.logger.Error("Invalid refresh token request", "error", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

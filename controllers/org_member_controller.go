@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log/slog"
 	"net/http"
 
 	"idmapp-go/dto"
@@ -8,18 +9,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 type OrgMemberController struct {
 	service *services.OrgMemberService
-	logger  *logrus.Logger
+	logger  *slog.Logger
 }
 
 func NewOrgMemberController(service *services.OrgMemberService) *OrgMemberController {
 	return &OrgMemberController{
 		service: service,
-		logger:  logrus.New(),
+		logger:  slog.Default(),
 	}
 }
 
@@ -33,7 +33,7 @@ func (c *OrgMemberController) HandleMemberOperation(ctx *gin.Context) {
 	if req.Op == 1 { // ADD
 		orgMember, err := c.service.AddMember(req.OrgID, req.EntityID, req.Type)
 		if err != nil {
-			c.logger.Errorf("Failed to add org member: %v", err)
+			c.logger.Error("Failed to add org member", "error", err, "orgID", req.OrgID, "entityID", req.EntityID, "type", req.Type)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -42,7 +42,7 @@ func (c *OrgMemberController) HandleMemberOperation(ctx *gin.Context) {
 	} else if req.Op == 2 { // REMOVE
 		removed, err := c.service.RemoveMember(req.OrgID, req.EntityID)
 		if err != nil {
-			c.logger.Errorf("Failed to remove org member: %v", err)
+			c.logger.Error("Failed to remove org member", "error", err, "orgID", req.OrgID, "entityID", req.EntityID)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -59,7 +59,7 @@ func (c *OrgMemberController) HandleMemberOperation(ctx *gin.Context) {
 func (c *OrgMemberController) GetAllMembers(ctx *gin.Context) {
 	members, err := c.service.GetAllMembers()
 	if err != nil {
-		c.logger.Errorf("Failed to get org members: %v", err)
+		c.logger.Error("Failed to get org members", "error", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get org members"})
 		return
 	}
@@ -77,7 +77,7 @@ func (c *OrgMemberController) GetMembersByOrgID(ctx *gin.Context) {
 
 	members, err := c.service.GetMembersByOrgID(orgID)
 	if err != nil {
-		c.logger.Errorf("Failed to get org members by org ID: %v", err)
+		c.logger.Error("Failed to get org members by org ID", "error", err, "orgID", orgID)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get org members"})
 		return
 	}
@@ -95,7 +95,7 @@ func (c *OrgMemberController) GetMembersByEntityID(ctx *gin.Context) {
 
 	members, err := c.service.GetMembersByEntityID(entityID)
 	if err != nil {
-		c.logger.Errorf("Failed to get org members by entity ID: %v", err)
+		c.logger.Error("Failed to get org members by entity ID", "error", err, "entityID", entityID)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get org members"})
 		return
 	}
